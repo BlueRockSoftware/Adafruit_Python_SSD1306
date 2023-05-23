@@ -20,14 +20,18 @@
 # THE SOFTWARE.
 import time
 
-import Adafruit_GPIO.SPI as SPI
+#import Adafruit_GPIO.SPI as SPI
 import Adafruit_SSD1306
 
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 
+import PIL.ImageOps
+
 import subprocess
+import re 
+
 
 # Raspberry Pi pin configuration:
 RST = None     # on the PiOLED this pin isnt used
@@ -86,6 +90,8 @@ draw = ImageDraw.Draw(image)
 # Draw a black filled box to clear the image.
 draw.rectangle((0,0,width,height), outline=0, fill=0)
 
+data = "No Playback/recording"
+
 # Draw some shapes.
 # First define some constants to allow easy resizing of shapes.
 padding = -2
@@ -98,33 +104,62 @@ x = 0
 # Load default font.
 font = ImageFont.load_default()
 
+image1 = Image.open('logo3.png').convert('1')
+image2 =image1.resize((128,32))
+disp.image(image2)
+disp.display()
+time.sleep(10)
+disp.clear()
+
 # Alternatively load a TTF font.  Make sure the .ttf font file is in the same directory as the python script!
 # Some other nice fonts to try: http://www.dafont.com/bitmap.php
 # font = ImageFont.truetype('Minecraftia.ttf', 8)
 
 while True:
-
     # Draw a black filled box to clear the image.
     draw.rectangle((0,0,width,height), outline=0, fill=0)
+    sample1 = open("/proc/asound/card0/pcm0p/sub0/hw_params","r")
+    sample1.seek(71)
+    playback_sample_rate = sample1.readline(5)
+
+    #data = sample_rate
+
+    if playback_sample_rate == "36000":
+        data = "sample rate:36Khz"
+    elif playback_sample_rate == "44100":
+        data = "sample rate:44.1Khz"
+    elif playback_sample_rate == "48000":
+        data = "sample rate:48Khz"
+    elif playback_sample_rate == "88200":
+        data = "sample rate:88.2Khz"
+    elif playback_sample_rate == "96000":
+        data = "sample rate:96Khz"
+    elif playback_sample_rate == "17640":
+        data = "sample rate:176.4Khz"
+    elif playback_sample_rate == "19200":
+        data = "sample rate:192Khz"
+    elif playback_sample_rate == "":
+        data = "No Playback/recording"
 
     # Shell scripts for system monitoring from here : https://unix.stackexchange.com/questions/119126/command-to-display-memory-usage-disk-usage-and-cpu-load
-    cmd = "hostname -I | cut -d\' \' -f1"
-    IP = subprocess.check_output(cmd, shell = True )
+    cmd = "hostname -I"
+    IP = subprocess.check_output(cmd, shell = True, text = True)
     cmd = "top -bn1 | grep load | awk '{printf \"CPU Load: %.2f\", $(NF-2)}'"
-    CPU = subprocess.check_output(cmd, shell = True )
+    CPU = subprocess.check_output(cmd, shell = True, text = True )
     cmd = "free -m | awk 'NR==2{printf \"Mem: %s/%sMB %.2f%%\", $3,$2,$3*100/$2 }'"
-    MemUsage = subprocess.check_output(cmd, shell = True )
+    MemUsage = subprocess.check_output(cmd, shell = True ,text = True )
     cmd = "df -h | awk '$NF==\"/\"{printf \"Disk: %d/%dGB %s\", $3,$2,$5}'"
-    Disk = subprocess.check_output(cmd, shell = True )
+    Disk = subprocess.check_output(cmd, shell = True,text = True  )
 
     # Write two lines of text.
 
     draw.text((x, top),       "IP: " + str(IP),  font=font, fill=255)
     draw.text((x, top+8),     str(CPU), font=font, fill=255)
-    draw.text((x, top+16),    str(MemUsage),  font=font, fill=255)
-    draw.text((x, top+25),    str(Disk),  font=font, fill=255)
-
-    # Display image.
+   # draw.text((x, top+16),    str(MemUsage),  font=font, fill=255)
+    draw.text((x, top+16),    str(data),  font=font, fill=500)
     disp.image(image)
     disp.display()
     time.sleep(.1)
+
+    # Display image.
+
